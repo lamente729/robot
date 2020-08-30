@@ -1090,7 +1090,7 @@ namespace URWPGSim2D.Strategy
             //}
             //====================我是华丽的分割线====================//
             #endregion
-            //请从这里开始编写代码
+            //请从这里开始编写代码=======================================================+++++++++++++++++++++++==============================+++++++++++
             int mPeriod = Convert.ToInt32(mission.HtMissionVariables["CompetitionPeriod"]);
             int time = mission.CommonPara.RemainingCycles / 10;
             int b0 = Convert.ToInt32(mission.HtMissionVariables["Ball0InHole"]);
