@@ -1,0 +1,1240 @@
+# robot
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using xna = Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
+using URWPGSim2D.Common;
+using URWPGSim2D.StrategyLoader;
+
+namespace URWPGSim2D.Strategy
+{
+    public class Strategy : MarshalByRefObject, IStrategy
+    {
+        #region reserved code never be changed or removed
+        /// <summary>
+        /// override the InitializeLifetimeService to return null instead of a valid ILease implementation
+        /// to ensure this type of remote object never dies
+        /// </summary>
+        /// <returns>null</returns>
+        public override object InitializeLifetimeService()
+        {
+            //return base.InitializeLifetimeService();
+            return null; // makes the object live indefinitely
+        }
+        public static float xzdangle;
+        public static float rdx;
+        public static float rdz;
+        public static float jd1;
+        public static float jd2;
+        public static float rd;
+        public static float tempj;
+        public static float temp1;
+        #endregion
+
+        #region 逐渐调整鱼体方向与目标方向一致
+        private int ATOT(float angvel)
+        {
+            if (0f == angvel)
+            {
+                return 7;
+            }
+            if (angvel < 0f)
+            {
+                if ((-0.005395 <= angvel) && (0f > angvel))
+                {
+                    if ((0f - angvel) >= (angvel + 0.005395))
+                    {
+                        return 6;
+                    }
+                    return 7;
+                }
+                if ((-0.009016 <= angvel) && (-0.005395 > angvel))
+                {
+                    if ((-0.005395 - angvel) >= (angvel + 0.009016))
+                    {
+                        return 5;
+                    }
+                    return 6;
+                }
+                if ((-0.014203 <= angvel) && (-0.009016 > angvel))
+                {
+                    if ((-0.009016 - angvel) >= (angvel + 0.014203))
+                    {
+                        return 4;
+                    }
+                    return 5;
+                }
+                if ((-0.019907 <= angvel) && (-0.014203 > angvel))
+                {
+                    if ((-0.014203 - angvel) >= (angvel + 0.019907))
+                    {
+                        return 3;
+                    }
+                    return 4;
+                }
+                if ((-0.0253 <= angvel) && (-0.019907 > angvel))
+                {
+                    if ((-0.019907 - angvel) >= (angvel + 0.0253))
+                    {
+                        return 2;
+                    }
+                    return 3;
+                }
+                if ((-0.033592 <= angvel) && (-0.0253 > angvel))
+                {
+                    if ((-0.0253 - angvel) >= (angvel + 0.033592))
+                    {
+                        return 1;
+                    }
+                    return 2;
+                }
+                return 0;
+            }
+            if ((0.005395 >= angvel) && (0f < angvel))
+            {
+                if ((angvel - 0f) > (0.005395 - angvel))
+                {
+                    return 8;
+                }
+                return 7;
+            }
+            if ((0.009016 >= angvel) && (0.005395 < angvel))
+            {
+                if ((angvel - 0.005395) > (0.009016 - angvel))
+                {
+                    return 9;
+                }
+                return 8;
+            }
+            if ((0.014203 >= angvel) && (0.009016 < angvel))
+            {
+                if ((angvel - 0.009016) > (0.014203 - angvel))
+                {
+                    return 10;
+                }
+                return 9;
+            }
+            if ((0.019907 >= angvel) && (0.014203 < angvel))
+            {
+                if ((angvel - 0.014203) > (0.019907 - angvel))
+                {
+                    return 11;
+                }
+                return 10;
+            }
+            if ((0.0253 >= angvel) && (0.019907 < angvel))
+            {
+                if ((angvel - 0.019907) > (0.0253 - angvel))
+                {
+                    return 12;
+                }
+                return 11;
+            }
+            if ((0.033592 >= angvel) && (0.0253 < angvel))
+            {
+                if ((angvel - 0.0253) > (0.033592 - angvel))
+                {
+                    return 13;
+                }
+                return 12;
+            }
+            if ((0.040848 >= angvel) && (0.033592 < angvel))
+            {
+                if ((angvel - 0.033592) > (0.040848 - angvel))
+                {
+                    return 14;
+                }
+                return 13;
+            }
+            return 14;
+        }
+        #endregion
+
+        #region Getxzdangle  鱼与球的方向角
+        private float Getxzdangle(float cur_x, float cur_z, float dest_x, float dest_z, float fish_rad)//弧度角
+        {
+
+            float num = (float)Math.Abs(Math.Atan((double)((cur_x - dest_x) / (cur_z - dest_z))));
+            if ((cur_x > dest_x) && (cur_z > dest_z))
+            {
+                if ((fish_rad > -(1.5707963267948966 + num)) && (fish_rad < (1.5707963267948966 - num)))
+                {
+                    xzdangle = (((float)1.5707963267948966) + num) + fish_rad;
+                    xzdangle = -xzdangle;
+                }
+                else if ((fish_rad > (1.5707963267948966 - num)) && (fish_rad < 3.1415926535897931))
+                {
+                    xzdangle = (((float)4.71238898038469) - fish_rad) - num;
+                }
+                else if ((fish_rad < -(1.5707963267948966 + num)) && (fish_rad > -3.1415926535897931))
+                {
+                    xzdangle = (((float)-1.5707963267948966) - num) - fish_rad;
+                }
+            }
+            else if ((cur_x > dest_x) && (cur_z < dest_z))
+            {
+                if ((fish_rad < (1.5707963267948966 + num)) && (-(1.5707963267948966 - num) < fish_rad))
+                {
+                    xzdangle = (((float)1.5707963267948966) + num) - fish_rad;
+                }
+                else if ((-(1.5707963267948966 - num) > fish_rad) && (fish_rad > -3.1415926535897931))
+                {
+                    xzdangle = (((float)4.71238898038469) + fish_rad) - num;
+                    xzdangle = -xzdangle;
+                }
+                else if ((fish_rad > (1.5707963267948966 + num)) && (fish_rad < 3.1415926535897931))
+                {
+                    xzdangle = (fish_rad - num) - ((float)1.5707963267948966);
+                    xzdangle = -xzdangle;
+                }
+            }
+            else if ((cur_x < dest_x) && (cur_z > dest_z))
+            {
+                if ((fish_rad > -(1.5707963267948966 - num)) && (fish_rad < (1.5707963267948966 + num)))
+                {
+                    xzdangle = (((float)1.5707963267948966) + fish_rad) - num;
+                    xzdangle = -xzdangle;
+                }
+                else if ((fish_rad < -(1.5707963267948966 - num)) && (fish_rad > -3.1415926535897931))
+                {
+                    xzdangle = (num - fish_rad) - ((float)1.5707963267948966);
+                }
+                else if ((fish_rad > (1.5707963267948966 + num)) && (fish_rad < 3.1415926535897931))
+                {
+                    xzdangle = (((float)4.71238898038469) + num) - fish_rad;
+                }
+            }
+            else if ((cur_x < dest_x) && (cur_z < dest_z))
+            {
+                if ((fish_rad < (1.5707963267948966 - num)) && (fish_rad > -(1.5707963267948966 + num)))
+                {
+                    xzdangle = (((float)1.5707963267948966) - num) - fish_rad;
+                }
+                else if ((fish_rad > (1.5707963267948966 - num)) && (fish_rad < 3.1415926535897931))
+                {
+                    xzdangle = (fish_rad + num) - ((float)1.5707963267948966);
+                    xzdangle = -xzdangle;
+                }
+                else if ((fish_rad < -(1.5707963267948966 + num)) && (fish_rad > -3.1415926535897931))
+                {
+                    xzdangle = (((float)4.71238898038469) + fish_rad) + num;
+                    xzdangle = -xzdangle;
+                }
+            }
+            return xzdangle;
+        }
+        #endregion
+
+        #region  得到球X坐标
+        private float GetPointX(float ball_x, float ball_z, float dest_x, float dest_z, float ball_r)
+        {
+            float num2 = 0f;
+            num2 = (float)Math.Atan((double)(Math.Abs((float)(ball_z - dest_z)) / Math.Abs((float)(ball_x - dest_x))));
+            if (ball_x > dest_x)
+            {
+                return (ball_x + ((float)(ball_r * Math.Cos((double)num2))));
+            }
+            if (ball_x < dest_x)
+            {
+                return (ball_x - ((float)(ball_r * Math.Cos((double)num2))));
+            }
+            return ball_x;
+        }
+        #endregion
+
+        #region  得到球Z坐标
+        private float GetPointZ(float ball_x, float ball_z, float dest_x, float dest_z, float ball_r)
+        {
+            float num2 = 0f;
+            num2 = (float)Math.Atan((double)(Math.Abs((float)(ball_z - dest_z)) / Math.Abs((float)(ball_x - dest_x))));
+            if (ball_z < dest_z)
+            {
+                return (ball_z - ((float)(ball_r * Math.Sin((double)num2))));
+            }
+            if (ball_z > dest_z)
+            {
+                return (ball_z + ((float)(ball_r * Math.Sin((double)num2))));
+            }
+            return ball_z;
+        }
+        #endregion
+
+        #region  turn
+        private void Turn(Mission mission, ref Decision[] fish, float dest_x, float dest_z, int i, int teamId)
+        {
+            int num = (int)RadtoAng(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PositionMm.X, mission.TeamsRef[teamId].Fishes[i].PositionMm.Z, dest_x, dest_z, mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad));
+
+            if ((num >= -1) && (num <= 1))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 0;
+            }
+            else if ((num >= -8) && (num < -1))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 0;
+            }
+            else if ((num >= -12) && (num < -8))
+            {
+                decisions[i].TCode = 6;
+                decisions[i].VCode = 0;
+            }
+            else if ((num >= -20) && (num < -12))
+            {
+                decisions[i].TCode = 5;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > -30) && (num < -20))
+            {
+                decisions[i].TCode = 4;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > -50) && (num < -30))
+            {
+                decisions[i].TCode = 2;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > -90) && (num < -50))
+            {
+                decisions[i].TCode = 1;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > -180) && (num < -90))
+            {
+                decisions[i].TCode = 0;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > 1) && (num <= 8))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 0;
+            }
+            else if ((num > 8) && (num <= 20))
+            {
+                decisions[i].TCode = 9;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > 20) && (num < 40))
+            {
+                decisions[i].TCode = 12;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > 40) && (num < 60))
+            {
+                decisions[i].TCode = 13;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > 60) && (num < 180))
+            {
+                decisions[i].TCode = 14;
+                decisions[i].VCode = 1;
+            }
+            else
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 0;
+            }
+
+
+        }
+        #endregion
+
+        #region  SwimToDest
+        private void SwimToDest(Mission mission, ref Decision[] fish, int i, float dest_x, float dest_z, int n, int teamId)
+        {
+            decisions[i].TCode = ATOT(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PositionMm.X, mission.TeamsRef[teamId].Fishes[i].PositionMm.Z, dest_x, dest_z, mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad));
+            decisions[i].VCode = 3;
+            if (n > 7)
+            {
+                n = 0;
+            }
+            int num = (int)RadtoAng(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PositionMm.X, mission.TeamsRef[teamId].Fishes[i].PositionMm.Z, dest_x, dest_z, mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad));
+            if ((num > -1) && (num < 1))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 14 - n - 1;
+            }
+            else if ((num > -5) && (num < -1))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 14 - n - 1;
+            }
+            else if ((num > -20) && (num < -5))
+            {
+                decisions[i].TCode = 4;
+                decisions[i].VCode = 12 - n - 1;
+            }
+            else if ((num > -40) && (num < -20))
+            {
+                decisions[i].TCode = 1;
+                decisions[i].VCode = 10 - n - 1;
+            }
+            else if ((num > -60) && (num < -40))
+            {
+                decisions[i].TCode = 0;
+                decisions[i].VCode = 8 - n - 1;
+            }
+            else if ((num > -180) && (num < -60))
+            {
+                decisions[i].TCode = 0;
+                decisions[i].VCode = 4 - 1;
+            }
+            else if ((num > 1) && (num < 5))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 14 - n - 1;
+            }
+            else if ((num > 5) && (num < 20))
+            {
+                decisions[i].TCode = 10;
+                decisions[i].VCode = 12 - n - 1;
+            }
+            else if ((num > 20) && (num < 40))
+            {
+                decisions[i].TCode = 13;
+                decisions[i].VCode = 10 - n - 1;
+            }
+            else if ((num > 40) && (num < 60))
+            {
+                decisions[i].TCode = 14;
+                decisions[i].VCode = 8 - n - 1;
+            }
+            else if ((num > 60) && (num < 180))
+            {
+                decisions[i].TCode = 14;
+                decisions[i].VCode = 4 - 1;
+            }
+        }
+        #endregion
+
+        private xna.Vector3[] hole = new xna.Vector3[6];
+
+        private void CalHol()
+        {
+            for (int i = 1; i <= 4; i++)
+                for (int j = 1; j <= i; j++)
+                {
+                    int l = i * (i - 1) / 2 + j - 1;
+                    hole[l].Y = 0;
+                    hole[l].X = -(i * 3 - 3) * 80;
+                    hole[l].Z = -(i - 1) * 2 * 80 + 4 * (j - 1) * 80;
+                }
+        }//球的坐标
+
+        #region RadtoAng   弧度转变成角
+        private float RadtoAng(float red)
+        {
+            return (float)((((double)red) / 3.1415926535897931) * 180.0);
+        }
+        #endregion
+
+        private float DIS(float cur_x, float cur_z, float dest_x, float dest_z)
+        {
+            return (float)Math.Sqrt(Math.Pow((double)(cur_x - dest_x), 2.0) + Math.Pow((double)(cur_z - dest_z), 2.0));
+        }
+        private float GetAngleToDestpoint(float cur_x, float cur_z, float dest_x, float dest_z)
+        {
+            return (float)Math.Atan2((double)(dest_z - cur_z), (double)(dest_x - cur_x));
+        }
+        private float distancetoangle(float x, float z, float a, float b)
+        {
+            float num = b - z;
+            float num2 = a - x;
+            return (float)Math.Atan((double)(num / num2));
+        }
+
+        #region get角度数值
+        public static float GetAngleDegree(Vector3 v)//角度数值
+        {
+            float x = v.X;
+            float z = v.Z;
+            float num3 = 0f;
+            if (Math.Abs(x) < float.Epsilon)
+            {
+                if (Math.Abs(z) < float.Epsilon)
+                {
+                    return 0f;
+                }
+                if (z > 0f)
+                {
+                    return 90f;
+                }
+                if (z < 0f)
+                {
+                    num3 = -90f;
+                }
+                return num3;
+            }
+            if (x < 0f)
+            {
+                if (z >= 0f)
+                {
+                    return (((float)((180.0 * Math.Atan((double)(z / x))) / 3.1415926535897931)) + 180f);
+                }
+                return (((float)((180.0 * Math.Atan((double)(z / x))) / 3.1415926535897931)) - 180f);
+            }
+            return (float)((180.0 * Math.Atan((double)(z / x))) / 3.1415926535897931);
+        }
+        #endregion
+
+        #region PushBall1
+        private void PushBall1(Mission mission, ref Decision[] fish, int i, int j, float dest_x, float dest_z, float cha_x, float cha_z, int teamId)
+        {
+            int num;
+            int num2;
+            float num3;
+            Vector3 vector;
+            vector.X = GetPointX(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(mission.EnvRef.Balls[j].RadiusMm - 0x12)) + cha_x;
+            vector.Y = 0f;
+            vector.Z = GetPointZ(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(mission.EnvRef.Balls[j].RadiusMm - 0x12)) + cha_z;
+            if ((mission.EnvRef.Balls[j].PositionMm.X > 1100f) && (mission.EnvRef.Balls[j].PositionMm.Z > -500f))
+            {
+                num = 4;
+                num2 = 5;
+            }
+            else if ((mission.CommonPara.RemainingCycles % 4) == 0)
+            {
+                if (Math.Abs(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].X, mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].Z, vector.X, vector.Z, mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad)) < 1f)
+                {
+                    num = 8;
+                    num2 = 11;
+                }
+                else
+                {
+                    num = 8;
+                    num2 = 11;
+                }
+            }
+            else
+            {
+                num = 7;
+                num2 = 9;
+            }
+            if (((3 == mission.TeamsRef[teamId].Para.Score) && (mission.EnvRef.Balls[j].PositionMm.Z > -200f)) && (mission.EnvRef.Balls[j].PositionMm.X < -1300f))
+            {
+                num3 = 10f;
+            }
+            else
+            {
+                num3 = 8f;
+            }
+            float angleDegree = GetAngleDegree(vector);
+            if (DIS(mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].X, mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].Z, mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z) >= 800f)
+            {
+                decisions[i].TCode = ATOT(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PositionMm.X, mission.TeamsRef[teamId].Fishes[i].PositionMm.Z, GetPointX(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(mission.EnvRef.Balls[j].RadiusMm - 0x19)), GetPointZ(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(mission.EnvRef.Balls[j].RadiusMm - 0x19)), mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad));
+                decisions[i].VCode = 12;
+            }
+            if (DIS(mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].X, mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].Z, mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z) < 800f)
+            {
+                decisions[i].TCode = ATOT(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PositionMm.X, mission.TeamsRef[teamId].Fishes[i].PositionMm.Z, GetPointX(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(mission.EnvRef.Balls[j].RadiusMm - 0x19)), GetPointZ(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(mission.EnvRef.Balls[j].RadiusMm - 0x19)), mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad));
+                decisions[i].VCode = 6;
+            }
+            if (DIS(mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].X, mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].Z, mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z) < 300f)
+            {
+                URWPGSim2D.StrategyHelper.Helpers.Dribble(ref decisions[i], mission.TeamsRef[teamId].Fishes[i], vector, angleDegree, 8f, num3, 130f, num, num2, 5, mission.CommonPara.MsPerCycle, true);
+            }
+        }
+        #endregion
+
+        #region  distance   鱼的位置与目标点距离
+        public float distance(xna.Vector3 poi1, xna.Vector3 poi2)
+        {
+            float dis;
+            dis = (float)Math.Sqrt((poi1.X - poi2.X) * (poi1.X - poi2.X) + (poi1.Z - poi2.Z) * (poi1.Z - poi2.Z));
+            return dis;
+        }
+        #endregion
+
+        #region dirr   方向
+        public float from(float dir1, float dir2)
+        {
+            float dirr;
+            dirr = dir2 - dir1;
+            if (dirr > Math.PI)
+                dirr -= 2 * (float)Math.PI;
+            if (dirr < -Math.PI)
+                dirr += 2 * (float)Math.PI;
+            return dirr;
+        }
+        int times = 0;
+        #endregion
+
+        #region 以dirr的方向推球到position i
+        public void PtoP1(Mission mission, ref Decision decision, int teamId, int i, float dirr, xna.Vector3 posi)
+        {
+            float dir1, dir2;
+            dir1 = dir(mission.TeamsRef[teamId].Fishes[i].PositionMm, posi);//速度方向
+            dir2 = from(mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad, dir1);//速度方向与鱼体方向夹角，正右负左
+
+            if (distance(mission.TeamsRef[teamId].Fishes[i].PositionMm, posi) > 800)
+            {
+                if (RadtoAng(dir2) < -60 || RadtoAng(dir2) > 60)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 1;
+                }
+
+                if (RadtoAng(dir2) < -45 && RadtoAng(dir2) >= -60)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 2;
+                }
+                if (RadtoAng(dir2) > 45 && RadtoAng(dir2) <= 60)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 2;
+                }
+
+                if (RadtoAng(dir2) < -30 && RadtoAng(dir2) >= -45)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 3;
+                }
+                if (RadtoAng(dir2) > 30 && RadtoAng(dir2) <= 45)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 3;
+                }
+
+                if (RadtoAng(dir2) < -25 && RadtoAng(dir2) >= -30)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 4;
+                }
+                if (RadtoAng(dir2) > 25 && RadtoAng(dir2) < 30)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 4;
+                }
+
+                if (RadtoAng(dir2) < -20 && RadtoAng(dir2) >= -25)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 5;
+                }
+                if (RadtoAng(dir2) > 20 && RadtoAng(dir2) < 25)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 6;
+                }
+
+                if (RadtoAng(dir2) < -15 && RadtoAng(dir2) >= -20)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 6;
+                }
+                if (RadtoAng(dir2) > 15 && RadtoAng(dir2) < 20)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 6;
+                }
+                if (RadtoAng(dir2) >= -15 && RadtoAng(dir2) < -10)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 8;
+                }
+                if (RadtoAng(dir2) <= 15 && RadtoAng(dir2) > 10)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 8;
+                }
+
+                if (RadtoAng(dir2) >= -10 && RadtoAng(dir2) < -5)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 10;
+                }
+                if (RadtoAng(dir2) <= 10 && RadtoAng(dir2) > 5)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 10;
+                }
+                if (RadtoAng(dir2) <= 3 && RadtoAng(dir2) >= -3)
+                {
+                    decisions[i].TCode = 7;
+                    decisions[i].VCode = 12;
+                }
+            }
+            if (distance(mission.TeamsRef[teamId].Fishes[i].PositionMm, posi) <= 800 && distance(mission.TeamsRef[teamId].Fishes[i].PositionMm, posi) > 450)
+            {
+                if (RadtoAng(dir2) < -60 || RadtoAng(dir2) > 60)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 1;
+                }
+                if (RadtoAng(dir2) < -45 && RadtoAng(dir2) >= -60 || RadtoAng(dir2) > 45 && RadtoAng(dir2) <= 60)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 2;
+                }
+                if (RadtoAng(dir2) < -45 && RadtoAng(dir2) >= -60 || RadtoAng(dir2) > 45 && RadtoAng(dir2) <= 60)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 3;
+                }
+
+                if (RadtoAng(dir2) < -30 && RadtoAng(dir2) >= -45 || RadtoAng(dir2) > 30 && RadtoAng(dir2) <= 45)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 4;
+                }
+                if (RadtoAng(dir2) < -15 && RadtoAng(dir2) >= -30 || RadtoAng(dir2) > 15 && RadtoAng(dir2) <= 30)
+                {
+                    decisions[i].TCode = 6;
+                    decisions[i].VCode = 5;
+                }
+
+                if (RadtoAng(dir2) >= -15 && RadtoAng(dir2) < -7)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 6;
+                }
+                if (RadtoAng(dir2) <= 15 && RadtoAng(dir2) > 7)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 6;
+
+                }
+
+                if (RadtoAng(dir2) >= -7 && RadtoAng(dir2) < -3)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 7;
+                }
+                if (RadtoAng(dir2) <= 7 && RadtoAng(dir2) > 3)
+                {
+                    decisions[i].TCode = ATOT(dir2);
+                    decisions[i].VCode = 7;
+                }
+
+                if (RadtoAng(dir2) <= 3 && RadtoAng(dir2) >= -3)
+                {
+                    decisions[i].TCode = 7;
+                    decisions[i].VCode = 8;
+                }
+            }
+            //if (distance(mission.TeamsRef[teamId].Fishes[i].PositionMm, posi) <= 450 && distance(mission.TeamsRef[teamId].Fishes[i].PositionMm, posi) > 300)
+            //{
+            //    if (RadtoAng(dir2) < -60 || RadtoAng(dir2) > 60)
+            //    {
+            //        decisions[i].TCode = ATOT(dir2);
+            //        decisions[i].VCode = 1;
+            //    }
+            //    if (RadtoAng(dir2) < -30 && RadtoAng(dir2) >= -60)
+            //    {
+            //        decisions[i].TCode = ATOT(dir2);
+            //        decisions[i].VCode = 3;
+            //    }
+            //    if (RadtoAng(dir2) > 30 && RadtoAng(dir2) <= 60)
+            //    {
+            //        decisions[i].TCode = ATOT(dir2);
+            //        decisions[i].VCode = 3;
+            //    }
+            //    if (RadtoAng(dir2) < -15 && RadtoAng(dir2) >= -30)
+            //    {
+            //        decisions[i].TCode = ATOT(dir2);
+            //        decisions[i].VCode = 3;
+            //    }
+            //    if (RadtoAng(dir2) > 15 && RadtoAng(dir2) < 30)
+            //    {
+            //        decisions[i].TCode = ATOT(dir2);
+            //        decisions[i].VCode = 3;
+            //    }
+            //    if (RadtoAng(dir2) >= -15 && RadtoAng(dir2) < -3)
+            //    {
+            //        decisions[i].TCode = ATOT(dir2);
+            //        decisions[i].VCode = 3;
+            //    }
+            //    if (RadtoAng(dir2) <= 15 && RadtoAng(dir2) > 3)
+            //    {
+            //        decisions[i].TCode = ATOT(dir2);
+            //        decisions[i].VCode = 3;
+            //    }
+            //    if (RadtoAng(dir2) <= 3 && RadtoAng(dir2) >= -3)
+            //    {
+            //        decisions[i].TCode = ATOT(dir2);
+            //        decisions[i].VCode = 4;
+            //    }
+            //}
+            if (distance(mission.TeamsRef[teamId].Fishes[i].PositionMm, posi) <= 450)
+            {
+                StrategyHelper.Helpers.PoseToPose(ref decisions[i], mission.TeamsRef[teamId].Fishes[i], posi, dirr, 30.0f, 70.0f, mission.CommonPara.MsPerCycle, ref times);
+
+            }
+            /* if (mission.TeamsRef[teamId].Fishes[i].PositionMm.X > (posi.X - 25) && mission.TeamsRef[teamId].Fishes[i].PositionMm.X <( posi.X + 25 )&& mission.TeamsRef[teamId].Fishes[i].PositionMm.Z > (posi.Z - 25) && mission.TeamsRef[teamId].Fishes[i].PositionMm.Z < (posi.Z + 25) && mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad > (dirr - 3 * Math.PI / 180) && mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad < (dirr + 3 * Math.PI / 180))
+             {
+                 decisions[i].TCode = 7;
+                 decisions[i].VCode = 0;
+             }*/
+        }
+        #endregion
+
+        #region  dir   速度方向
+        public float dir(xna.Vector3 posi1, xna.Vector3 posi2)
+        {
+            float x = posi2.X - posi1.X;
+            float y = posi2.Z - posi1.Z;
+            float angle = 0;
+
+            if (Math.Abs(x) < float.Epsilon)
+            {// x = 0 直角反正切不存在
+                if (Math.Abs(y) < float.Epsilon) { angle = 0.0f; }
+                else if (y > 0) { angle = (float)Math.PI / 2; }
+                else if (y < 0) { angle = (float)-Math.PI / 2; }
+            }
+            else if (x < 0)
+            {// x < 0 (90,180]或(-180,-90)
+                if (y >= 0) { angle = (float)Math.Atan(y / x) + (float)Math.PI; }
+                else { angle = (float)Math.PI - (float)Math.Atan(y / x); }
+            }
+            else
+            {// x > 0 (-90,90)
+                angle = (float)Math.Atan(y / x);
+            }
+
+            return angle;
+        }
+        #endregion
+
+        #region GAD  获得点到点的角度值
+        public static float GAD(Vector3 v1, Vector3 v2)
+        {
+            float x = v2.X - v1.X;
+            float z = v2.Z - v1.Z;
+            float num3 = 0f;
+            if (Math.Abs(x) < float.Epsilon)
+            {
+                if (Math.Abs(z) < float.Epsilon)
+                {
+                    return 0f;
+                }
+                if (z > 0f)
+                {
+                    return 90f;
+                }
+                if (z < 0f)
+                {
+                    num3 = -90f;
+                }
+                return num3;
+            }
+            if (x < 0f)
+            {
+                if (z >= 0f)
+                {
+                    return (((float)((180.0 * Math.Atan((double)(z / x))) / 3.1415926535897931)) + 180f);
+                }
+                return (((float)((180.0 * Math.Atan((double)(z / x))) / 3.1415926535897931)) - 180f);
+            }
+            return (float)((180.0 * Math.Atan((double)(z / x))) / 3.1415926535897931);
+        }
+        #endregion
+
+        #region PushBall2(慢)//i是鱼编号 j是球编号
+        private void PushBall2(Mission mission, ref Decision[] fish, int i, int j, float dest_x, float dest_z, float cha_x, float cha_z, int teamId)
+        {
+            int num;
+            int num2;
+            float num3;
+            Vector3 vector;
+            vector.X = GetPointX(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(mission.EnvRef.Balls[j].RadiusMm - 0x12)) + cha_x;
+            vector.Y = 0f;
+            vector.Z = GetPointZ(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(mission.EnvRef.Balls[j].RadiusMm - 0x12)) + cha_z;
+            if ((mission.EnvRef.Balls[j].PositionMm.X > 1100f) && (mission.EnvRef.Balls[j].PositionMm.Z > -500f))
+            {
+                num = 4;
+                num2 = 5;
+            }
+            else if ((mission.CommonPara.RemainingCycles % 4) == 0)
+            {
+                if (Math.Abs(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].X, mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].Z, vector.X, vector.Z, mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad)) < 1f)
+                {
+                    num = 8;
+                    num2 = 11;
+                }
+                else
+                {
+                    num = 8;
+                    num2 = 11;
+                }
+            }
+
+            else if ((mission.EnvRef.Balls[j].PositionMm.X > -500f) && (mission.EnvRef.Balls[j].PositionMm.X < 100f))
+            {
+                if ((mission.EnvRef.Balls[j].PositionMm.Z >= -400f) && (mission.EnvRef.Balls[j].PositionMm.Z <= 400f))
+                {
+
+                    num = 6;
+                    num2 = 7;
+                }
+                else
+                {
+                    num = 10;
+                    num2 = 12;
+                }
+            }
+            else
+            {
+                num = 10;
+                num2 = 12;
+            }
+            if (((3 == mission.TeamsRef[teamId].Para.Score) && (mission.EnvRef.Balls[j].PositionMm.Z > -200f)) && (mission.EnvRef.Balls[j].PositionMm.X < -1300f))
+            {
+                num3 = 10f;
+            }
+            else if ((mission.EnvRef.Balls[j].PositionMm.X > -500f) && (mission.EnvRef.Balls[j].PositionMm.X < 100f))
+            {
+                if ((mission.EnvRef.Balls[j].PositionMm.Z >= -400f) && (mission.EnvRef.Balls[j].PositionMm.Z <= 400f))
+                {
+                    num3 = 8f;
+                }
+                else
+                {
+                    num3 = 3f;
+
+                }
+            }
+            else
+            {
+                num3 = 3f;
+            }
+            float angleDegree = GetAngleDegree(vector);
+            if (DIS(mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].X, mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].Z, mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z) >= 800f)
+            {
+                decisions[i].TCode = ATOT(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PositionMm.X, mission.TeamsRef[teamId].Fishes[i].PositionMm.Z, GetPointX(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(58)), GetPointZ(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(58)), mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad));
+                decisions[i].VCode = 10;
+            }
+            if (DIS(mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].X, mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].Z, mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z) < 800f)
+            {
+                decisions[i].TCode = ATOT(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PositionMm.X, mission.TeamsRef[teamId].Fishes[i].PositionMm.Z, GetPointX(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(58)), GetPointZ(mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z, dest_x, dest_z, (float)(58)), mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad));
+                decisions[i].VCode = 5;
+            }
+            if (DIS(mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].X, mission.TeamsRef[teamId].Fishes[i].PolygonVertices[0].Z, mission.EnvRef.Balls[j].PositionMm.X, mission.EnvRef.Balls[j].PositionMm.Z) < 300f)
+            {
+                URWPGSim2D.StrategyHelper.Helpers.Dribble(ref decisions[i], mission.TeamsRef[teamId].Fishes[i], vector, angleDegree, 8f, num3, 130f, num, num2, 5, mission.CommonPara.MsPerCycle, true);
+            }
+        }
+        #endregion
+
+        #region 判断是否丢球（丢球便重新获得球）
+        private void is_lostball(Mission mission, ref Decision[] fish, int i, int j, int teamId, float dir)
+        {
+            float fishiX, fishiZ;
+            float balljX, balljZ;
+            balljX = mission.EnvRef.Balls[j].PositionMm.X;
+            balljZ = mission.EnvRef.Balls[j].PositionMm.Z;
+            fishiX = mission.TeamsRef[teamId].Fishes[i].PositionMm.X;
+            fishiZ = mission.TeamsRef[teamId].Fishes[i].PositionMm.Y;
+            if ((balljZ - fishiZ) > 300 || (balljZ - fishiZ) < -300 || (balljX - fishiX) > 300 || (balljX - fishiX) < -300)
+                SwimToDest(mission, ref decisions, i, balljX, balljZ, 0, teamId);
+        }
+        #endregion
+
+
+        //#region turn 
+        // public void turn(Mission mission, ref Decision decision, int teamId, int i, float dirr)
+        //{
+        //    float dir;
+        //    dir = from(mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad, dirr);
+        //    decisions[i].TCode = ATOT(dir);
+        //    if (decisions[i].TCode != 7)
+        //        decisions[i].VCode = 1;
+        //    else
+        //        decisions[i].VCode = 0;
+
+        //}
+        //#endregion
+        private void Turn(Mission mission, ref Decision[] fish, int teamId, int i, float dirr, float dest_x, float dest_z)
+        {
+            int num = (int)RadtoAng(Getxzdangle(mission.TeamsRef[teamId].Fishes[i].PositionMm.X, mission.TeamsRef[teamId].Fishes[i].PositionMm.Z, dest_x, dest_z, mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad));
+            float dir;
+            dir = from(mission.TeamsRef[teamId].Fishes[i].BodyDirectionRad, dirr);
+            decisions[i].TCode = ATOT(dir);
+            if (decisions[i].TCode != 7)
+                decisions[i].VCode = 1;
+            else
+                decisions[i].VCode = 0;
+            if ((num >= -1) && (num <= 1))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 0;
+            }
+            else if ((num >= -8) && (num < -1))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 0;
+            }
+            else if ((num >= -20) && (num < -8))
+            {
+                decisions[i].TCode = 5;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > -40) && (num < -20))
+            {
+                decisions[i].TCode = 2;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > -60) && (num < -40))
+            {
+                decisions[i].TCode = 1;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > -180) && (num < -60))
+            {
+                decisions[i].TCode = 0;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > 1) && (num <= 8))
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 0;
+            }
+            else if ((num > 8) && (num <= 20))
+            {
+                decisions[i].TCode = 9;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > 20) && (num < 40))
+            {
+                decisions[i].TCode = 12;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > 40) && (num < 60))
+            {
+                decisions[i].TCode = 13;
+                decisions[i].VCode = 1;
+            }
+            else if ((num > 60) && (num < 180))
+            {
+                decisions[i].TCode = 14;
+                decisions[i].VCode = 1;
+            }
+            else
+            {
+                decisions[i].TCode = 7;
+                decisions[i].VCode = 0;
+            }
+
+
+        }
+
+        /// <summary>
+        /// 决策类当前对象对应的仿真使命参与队伍的决策数组引用 第一次调用GetDecision时分配空间
+        /// </summary>
+        /// 
+
+        private Decision[] decisions = null;
+
+        /// <summary>
+        /// 获取队伍名称 在此处设置参赛队伍的名称
+        /// </summary>
+        /// <returns>队伍名称字符串</returns>
+        public string GetTeamName()
+        {
+            return "陆军工程大学";
+        }
+
+        /// <summary>
+        /// 获取当前仿真使命（比赛项目）当前队伍所有仿真机器鱼的决策数据构成的数组
+        /// </summary>
+        /// <param name="mission">服务端当前运行着的仿真使命Mission对象</param>
+        /// <param name="teamId">当前队伍在服务端运行着的仿真使命中所处的编号 
+        /// 用于作为索引访问Mission对象的TeamsRef队伍列表中代表当前队伍的元素</param>
+        /// <returns>当前队伍所有仿真机器鱼的决策数据构成的Decision数组对象</returns>
+        public Decision[] GetDecision(Mission mission, int teamId)
+        {
+            // 决策类当前对象第一次调用GetDecision时Decision数组引用为null
+            if (decisions == null)
+            {// 根据决策类当前对象对应的仿真使命参与队伍仿真机器鱼的数量分配决策数组空间
+                decisions = new Decision[mission.CommonPara.FishCntPerTeam];
+            }
+
+            #region 决策计算过程 需要各参赛队伍实现的部分
+            #region 策略编写帮助信息
+            //====================我是华丽的分割线====================//
+            //======================策略编写指南======================//
+            //1.策略编写工作直接目标是给当前队伍决策数组decisions各元素填充决策值
+            //2.决策数据类型包括两个int成员，VCode为速度档位值，TCode为转弯档位值
+            //3.VCode取值范围0-14共15个整数值，每个整数对应一个速度值，速度值整体但非严格递增
+            //有个别档位值对应的速度值低于比它小的档位值对应的速度值，速度值数据来源于实验
+            //4.TCode取值范围0-14共15个整数值，每个整数对应一个角速度值
+            //整数7对应直游，角速度值为0，整数6-0，8-14分别对应左转和右转，偏离7越远，角度速度值越大
+            //5.任意两个速度/转弯档位之间切换，都需要若干个仿真周期，才能达到稳态速度/角速度值
+            //目前运动学计算过程决定稳态速度/角速度值接近但小于目标档位对应的速度/角速度值
+            //6.决策类Strategy的实例在加载完毕后一直存在于内存中，可以自定义私有成员变量保存必要信息
+            //但需要注意的是，保存的信息在中途更换策略时将会丢失
+            //====================我是华丽的分割线====================//
+            //=======策略中可以使用的比赛环境信息和过程信息说明=======//
+            //场地坐标系: 以毫米为单位，矩形场地中心为原点，向右为正X，向下为正Z
+            //            负X轴顺时针转回负X轴角度范围为(-PI,PI)的坐标系，也称为世界坐标系
+            //mission.CommonPara: 当前仿真使命公共参数
+            //mission.CommonPara.FishCntPerTeam: 每支队伍仿真机器鱼数量
+            //mission.CommonPara.MsPerCycle: 仿真周期毫秒数
+            //mission.CommonPara.RemainingCycles: 当前剩余仿真周期数
+            //mission.CommonPara.TeamCount: 当前仿真使命参与队伍数量
+            //mission.CommonPara.TotalSeconds: 当前仿真使命运行时间秒数
+            //mission.EnvRef.Balls: 
+            //当前仿真使命涉及到的仿真水球列表，列表元素的成员意义参见URWPGSim2D.Common.Ball类定义中的注释
+            //mission.EnvRef.FieldInfo: 
+            //当前仿真使命涉及到的仿真场地，各成员意义参见URWPGSim2D.Common.Field类定义中的注释
+            //mission.EnvRef.ObstaclesRect: 
+            //当前仿真使命涉及到的方形障碍物列表，列表元素的成员意义参见URWPGSim2D.Common.RectangularObstacle类定义中的注释
+            //mission.EnvRef.ObstaclesRound:
+            //当前仿真使命涉及到的圆形障碍物列表，列表元素的成员意义参见URWPGSim2D.Common.RoundedObstacle类定义中的注释
+            //mission.TeamsRef[teamId]:
+            //决策类当前对象对应的仿真使命参与队伍（当前队伍）
+            //mission.TeamsRef[teamId].Para:
+            //当前队伍公共参数，各成员意义参见URWPGSim2D.Common.TeamCommonPara类定义中的注释
+            //mission.TeamsRef[teamId].Fishes:
+            //当前队伍仿真机器鱼列表，列表元素的成员意义参见URWPGSim2D.Common.RoboFish类定义中的注释
+            //mission.TeamsRef[teamId].Fishes[i].PositionMm和PolygonVertices[0],BodyDirectionRad,VelocityMmPs,
+            //                                   AngularVelocityRadPs,Tactic:
+            //当前队伍第i条仿真机器鱼鱼体矩形中心和鱼头顶点在场地坐标系中的位置（用到X坐标和Z坐标），鱼体方向，速度值，
+            //                                   角速度值，决策值
+            //====================我是华丽的分割线====================//
+            //========================典型循环========================//
+            //for (int i = 0; i < mission.CommonPara.FishCntPerTeam; i++)
+            //{
+            //  decisions[i].VCode = 0; // 静止
+            //  decisions[i].TCode = 7; // 直游
+            //}
+            //====================我是华丽的分割线====================//
+            #endregion
+            //请从这里开始编写代码
+            int mPeriod = Convert.ToInt32(mission.HtMissionVariables["CompetitionPeriod"]);
+            int time = mission.CommonPara.RemainingCycles / 10;
+            xna.Vector3 positionl1 = mission.TeamsRef[teamId].Fishes[0].PositionMm;
+            xna.Vector3 positionl2 = mission.TeamsRef[teamId].Fishes[1].PositionMm;
+            float x1 = mission.TeamsRef[teamId].Fishes[0].PositionMm.X;
+            float z1 = mission.TeamsRef[teamId].Fishes[0].PositionMm.Z;
+            float bodyDirectionRad0 = mission.TeamsRef[0].Fishes[0].BodyDirectionRad;
+            float bodyDirectionRad1 = mission.TeamsRef[0].Fishes[1].BodyDirectionRad;
+            float x2 = mission.TeamsRef[teamId].Fishes[1].PositionMm.X;
+            float z2 = mission.TeamsRef[teamId].Fishes[1].PositionMm.Z;
+            xna.Vector3 position_ball0 = mission.EnvRef.Balls[0].PositionMm;
+            xna.Vector3 position_ball1 = mission.EnvRef.Balls[1].PositionMm;
+            xna.Vector3 t1 = new xna.Vector3(1120, 0, 0);
+
+            if (position_ball0.X < 1800 && position_ball1.X < 1800)
+            {
+                if (position_ball0.X < -1200 && position_ball1.Z < -1000 && position_ball1.X < -550)
+                {
+                    if (position_ball0.X < -1200 && position_ball0.Z > 1000)
+                    {
+                        //decisions[0].VCode = 7;
+                        Turn(mission, ref decisions, -1350f, 1050f, 0, teamId);
+                        SwimToDest(mission, ref decisions, 0, -1100f, 700f, 0, teamId);
+                        if (mission.TeamsRef[1].Fishes[0].PositionMm.Z > 650f && mission.TeamsRef[1].Fishes[0].PositionMm.Z < 1300 && mission.TeamsRef[1].Fishes[0].PositionMm.X < -1050 && mission.TeamsRef[1].Fishes[0].PositionMm.X > -1900)
+                        {
+                            PushBall1(mission, ref decisions, 0, 0, -2150f, 1450f, 0, 0, teamId);
+                        }
+                        if (mission.TeamsRef[1].Fishes[0].PositionMm.X < -1900f && mission.TeamsRef[1].Fishes[0].PositionMm.Z > -300f)
+                        {
+                            Turn(mission, ref decisions, -2100f, 0f, 0, teamId);
+                            SwimToDest(mission, ref decisions, 0, -2100f, 0f, 0, teamId);
+                            if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < 50f)
+                            {
+                                Turn(mission, ref decisions, -2100f, -350f, 0, teamId);
+                                SwimToDest(mission, ref decisions, 0, -2100f, -350f, 0, teamId);
+                            }
+                        }
+                        if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < -300f)
+                        {
+                            Turn(mission, ref decisions, -1800f, -800f, 0, 1);
+                            SwimToDest(mission, ref decisions, 0, -1800f, -800f, 0, teamId);
+                            if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < -700f)
+                            {
+                                Turn(mission, ref decisions, -1500f, -900f, 0, 1);
+                                SwimToDest(mission, ref decisions, 0, -1500f, -900f, 0, teamId);
+                                if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < -800f)
+                                {
+                                    PushBall1(mission, ref decisions, 0, 1, -600f, -1500f, 0, 0, teamId);
+                                }
+              
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[1].PositionMm))
+                    {
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[0].PositionMm.Z + 50f, 0, teamId);
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < 150f)
+                        {
+                            //decisions[0].VCode = 10;
+                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X, mission.TeamsRef[0].Fishes[0].PositionMm.Z, 0, teamId);
+                            //decisions[0].VCode = 10;
+                        }
+                    }
+                    else
+                    {
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[1].PositionMm.Z + 50f, 0, teamId);
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[1].PositionMm) < 150f)
+                        {
+                            //decisions[0].VCode = 10;
+                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X, mission.TeamsRef[0].Fishes[1].PositionMm.Z, 0, teamId);
+                            //decisions[0].VCode = 10;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (position_ball0.X > 1800)
+                {
+                    if (distance(mission.TeamsRef[0].Fishes[0].PositionMm, position_ball1) < distance(mission.TeamsRef[0].Fishes[1].PositionMm, position_ball1))
+                    {
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[0].PositionMm.Z + 50f, 0, teamId);
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < 150f)
+                        {
+                            decisions[0].VCode = 10;
+                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X, mission.TeamsRef[0].Fishes[0].PositionMm.Z, 0, teamId);
+                            decisions[0].VCode = 10;
+                        }
+                    }
+                    if (distance(mission.TeamsRef[0].Fishes[0].PositionMm, position_ball1) > distance(mission.TeamsRef[0].Fishes[1].PositionMm, position_ball1))
+                    {
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[1].PositionMm.Z + 50f, 0, teamId);
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[1].PositionMm) < 150f)
+                        {
+                            decisions[0].VCode = 10;
+                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X, mission.TeamsRef[0].Fishes[1].PositionMm.Z, 0, teamId);
+                            decisions[0].VCode = 10;
+                        }
+                    }
+                }
+                if (position_ball1.X > 1800)
+                {
+                    if (distance(mission.TeamsRef[0].Fishes[0].PositionMm, position_ball0) < distance(mission.TeamsRef[0].Fishes[1].PositionMm, position_ball0))
+                    {
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[0].PositionMm.Z + 50f, 0, teamId);
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < 150f)
+                        {
+                            decisions[0].VCode = 10;
+                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X, mission.TeamsRef[0].Fishes[0].PositionMm.Z, 0, teamId);
+                            decisions[0].VCode = 10;
+                        }
+                    }
+                    if (distance(mission.TeamsRef[0].Fishes[0].PositionMm, position_ball0) > distance(mission.TeamsRef[0].Fishes[1].PositionMm, position_ball0))
+                    {
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[1].PositionMm.Z + 50f, 0, teamId);
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[1].PositionMm) < 150f)
+                        {
+                            decisions[0].VCode = 10;
+                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X, mission.TeamsRef[0].Fishes[1].PositionMm.Z, 0, teamId);
+                            decisions[0].VCode = 10;
+                        }
+                    }
+                }
+            }
+            #endregion
+            return decisions;
+        }
+    }
+}
+
+
+
