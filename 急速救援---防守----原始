@@ -1,4 +1,4 @@
-# robot
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1119,63 +1119,63 @@ namespace URWPGSim2D.Strategy
 
             if (position_ball0.X < 1800 && position_ball1.X < 1800)
             {
-                if (position_ball0.X < -1200 && position_ball1.Z < -1000 && position_ball1.X < -550)
+                if (position_ball0.X < -1200 && position_ball1.Z < -1000 && position_ball1.X < -550)//上面的球在预定的被推的大范围
                 {
-                    if (position_ball0.X < -1200 && position_ball0.Z > 1000)
+                    if (position_ball0.X < -1200 && position_ball0.Z > 1000)//上面的球在通过障碍的左上角
                     {
                         //decisions[0].VCode = 7;
-                        Turn(mission, ref decisions, -1350f, 1050f, 0, teamId);
-                        SwimToDest(mission, ref decisions, 0, -1100f, 700f, 0, teamId);
-                        if (mission.TeamsRef[1].Fishes[0].PositionMm.Z > 650f && mission.TeamsRef[1].Fishes[0].PositionMm.Z < 1300 && mission.TeamsRef[1].Fishes[0].PositionMm.X < -1050 && mission.TeamsRef[1].Fishes[0].PositionMm.X > -1900)
+                        Turn(mission, ref decisions, -1350f, 1050f, 0, teamId);//转向下面的球
+                        SwimToDest(mission, ref decisions, 0, -1100f, 700f, 0, teamId);//游向下面球的过渡点
+                        if (mission.TeamsRef[1].Fishes[0].PositionMm.Z > 650f && mission.TeamsRef[1].Fishes[0].PositionMm.Z < 1300 && mission.TeamsRef[1].Fishes[0].PositionMm.X < -1050 && mission.TeamsRef[1].Fishes[0].PositionMm.X > -1900)//鱼在下面球的周围一圈
                         {
-                            PushBall1(mission, ref decisions, 0, 0, -2150f, 1450f, 0, 0, teamId);
+                            PushBall1(mission, ref decisions, 0, 0, -2150f, 1450f, 0, 0, teamId);//推球到坐下角
                         }
-                        if (mission.TeamsRef[1].Fishes[0].PositionMm.X < -1900f && mission.TeamsRef[1].Fishes[0].PositionMm.Z > -300f)
+                        if (mission.TeamsRef[1].Fishes[0].PositionMm.X < -1900f && mission.TeamsRef[1].Fishes[0].PositionMm.Z > -300f)//鱼在左侧边界，稍微超过中点
                         {
-                            Turn(mission, ref decisions, -2100f, 0f, 0, teamId);
-                            SwimToDest(mission, ref decisions, 0, -2100f, 0f, 0, teamId);
-                            if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < 50f)
+                            Turn(mission, ref decisions, -2100f, 0f, 0, teamId);//转向最左侧中央
+                            SwimToDest(mission, ref decisions, 0, -2100f, 0f, 0, teamId);//游向最左侧中央，准备待命
+                            if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < 50f)//若超过预定待命位置向上
                             {
-                                Turn(mission, ref decisions, -2100f, -350f, 0, teamId);
-                                SwimToDest(mission, ref decisions, 0, -2100f, -350f, 0, teamId);
+                                Turn(mission, ref decisions, -2100f, -350f, 0, teamId);//转向预定待命位置左上某点
+                                SwimToDest(mission, ref decisions, 0, -2100f, -350f, 0, teamId);//游向预定待命位置左上某点
                             }
                         }
                         if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < -300f)
                         {
-                            Turn(mission, ref decisions, -1800f, -800f, 0, 1);
-                            SwimToDest(mission, ref decisions, 0, -1800f, -800f, 0, teamId);
-                            if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < -700f)
+                            Turn(mission, ref decisions, -1800f, -800f, 0, 1);//转向上面球的中间过渡点
+                            SwimToDest(mission, ref decisions, 0, -1800f, -800f, 0, teamId);//游向上面球的中间过渡点
+                            if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < -700f)//快到过渡点，在点下面近处
                             {
-                                Turn(mission, ref decisions, -1500f, -900f, 0, 1);
+                                Turn(mission, ref decisions, -1500f, -900f, 0, 1);//距离球更近的位置
                                 SwimToDest(mission, ref decisions, 0, -1500f, -900f, 0, teamId);
                                 if (mission.TeamsRef[1].Fishes[0].PositionMm.Z < -800f)
                                 {
-                                    PushBall1(mission, ref decisions, 0, 1, -600f, -1500f, 0, 0, teamId);
+                                    PushBall1(mission, ref decisions, 0, 1, -600f, -1500f, 0, 0, teamId);//推球到右上障碍角
                                 }
-              
+
                             }
                         }
                     }
                 }
-                else
+                else//改：不要追红鱼，用攻方的返回函数，直接越障，这时候讨论，要是恰好选取路线和红方一致，就以300为界限，继续撞，否则不近的话直接到右边障碍口原地打转扰乱对方
                 {
-                    if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[1].PositionMm))
+                    if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[1].PositionMm))//如果距离一号鱼更近
                     {
-                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[0].PositionMm.Z + 50f, 0, teamId);
-                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < 150f)
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[0].PositionMm.Z + 50f, 0, teamId);//游向一号鱼头附近
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < 150f)//如果距离相当近
                         {
                             //decisions[0].VCode = 10;
-                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X, mission.TeamsRef[0].Fishes[0].PositionMm.Z, 0, teamId);
+                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X, mission.TeamsRef[0].Fishes[0].PositionMm.Z, 0, teamId);//游向一号鱼头
                             //decisions[0].VCode = 10;
                         }
                     }
                     else
                     {
-                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[1].PositionMm.Z + 50f, 0, teamId);
-                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[1].PositionMm) < 150f)
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[1].PositionMm.Z + 50f, 0, teamId);////如果距离二号鱼更近，游向二号鱼头附近
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[1].PositionMm) < 150f)////如果距离相当近
                         {
                             //decisions[0].VCode = 10;
-                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X, mission.TeamsRef[0].Fishes[1].PositionMm.Z, 0, teamId);
+                            SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[1].PositionMm.X, mission.TeamsRef[0].Fishes[1].PositionMm.Z, 0, teamId);//游向二号鱼头
                             //decisions[0].VCode = 10;
                         }
                     }
@@ -1183,12 +1183,12 @@ namespace URWPGSim2D.Strategy
             }
             else
             {
-                if (position_ball0.X > 1800)
+                if (position_ball0.X > 1800)//下面球进去了，死了
                 {
-                    if (distance(mission.TeamsRef[0].Fishes[0].PositionMm, position_ball1) < distance(mission.TeamsRef[0].Fishes[1].PositionMm, position_ball1))
+                    if (distance(mission.TeamsRef[0].Fishes[0].PositionMm, position_ball1) < distance(mission.TeamsRef[0].Fishes[1].PositionMm, position_ball1))//对方两条鱼0号距离上面球近
                     {
-                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[0].PositionMm.Z + 50f, 0, teamId);
-                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < 150f)
+                        SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X - 50f, mission.TeamsRef[0].Fishes[0].PositionMm.Z + 50f, 0, teamId);//游向0号鱼头附近
+                        if (distance(mission.TeamsRef[1].Fishes[0].PositionMm, mission.TeamsRef[0].Fishes[0].PositionMm) < 150f)//相当近
                         {
                             decisions[0].VCode = 10;
                             SwimToDest(mission, ref decisions, 0, mission.TeamsRef[0].Fishes[0].PositionMm.X, mission.TeamsRef[0].Fishes[0].PositionMm.Z, 0, teamId);
@@ -1206,7 +1206,7 @@ namespace URWPGSim2D.Strategy
                         }
                     }
                 }
-                if (position_ball1.X > 1800)
+                if (position_ball1.X > 1800//下面球进去，死了
                 {
                     if (distance(mission.TeamsRef[0].Fishes[0].PositionMm, position_ball0) < distance(mission.TeamsRef[0].Fishes[1].PositionMm, position_ball0))
                     {
